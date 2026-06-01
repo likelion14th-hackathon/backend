@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/todays_casting?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:todays}
+    password: ${DB_PASSWORD:todays1234}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+        jdbc:
+          time_zone: Asia/Seoul
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+logging:
+  level:
+    org.hibernate.SQL: debug
