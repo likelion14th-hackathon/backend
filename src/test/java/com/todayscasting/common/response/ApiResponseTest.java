@@ -35,7 +35,7 @@ class ApiResponseTest {
 
         assertThat(response.getIsSuccess()).isTrue();
         assertThat(response.getCode()).isEqualTo("COMMON_200");
-        assertThat(response.getMessage()).isEqualTo("?붿껌???깃났?덉뒿?덈떎.");
+        assertThat(response.getMessage()).isEqualTo("요청이 성공했습니다.");
         assertThat(response.getResult()).isEqualTo("result");
     }
 
@@ -45,14 +45,14 @@ class ApiResponseTest {
 
         assertThat(response.getIsSuccess()).isTrue();
         assertThat(response.getCode()).isEqualTo("COMMON_201");
-        assertThat(response.getMessage()).isEqualTo("由ъ냼?ㅺ? ?앹꽦?섏뿀?듬땲??");
+        assertThat(response.getMessage()).isEqualTo("리소스가 생성되었습니다.");
         assertThat(response.getResult()).isEqualTo(1L);
     }
 
     @Test
     void createsErrorResponseWithValidationDetails() {
         List<ValidationError> errors = List.of(
-                new ValidationError("email", "?대찓???뺤떇???щ컮瑜댁? ?딆뒿?덈떎.")
+                new ValidationError("email", "이메일 형식이 올바르지 않습니다.")
         );
 
         ApiResponse<List<ValidationError>> response =
@@ -60,7 +60,7 @@ class ApiResponseTest {
 
         assertThat(response.getIsSuccess()).isFalse();
         assertThat(response.getCode()).isEqualTo("COMMON_400_1");
-        assertThat(response.getMessage()).isEqualTo("?낅젰媛믪씠 ?щ컮瑜댁? ?딆뒿?덈떎.");
+        assertThat(response.getMessage()).isEqualTo("입력값이 올바르지 않습니다.");
         assertThat(response.getResult()).containsExactlyElementsOf(errors);
     }
 }

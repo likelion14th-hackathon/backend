@@ -3,7 +3,7 @@ package com.todayscasting.common.code;
 import org.springframework.http.HttpStatus;
 
 /**
- * ?ㅽ뙣 ?묐떟怨?HTTP ?곹깭 寃곗젙???꾩슂???먮윭 ?뺣낫瑜?臾띠? 媛?媛앹껜?낅땲??
+ * 실패 응답과 HTTP 상태 결정에 필요한 에러 정보를 묶은 값 객체입니다.
  */
 public record ErrorReasonDTO(
         HttpStatus status,

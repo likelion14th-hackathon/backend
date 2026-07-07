@@ -4,7 +4,7 @@ import com.todayscasting.common.code.BaseErrorCode;
 import com.todayscasting.common.exception.GeneralException;
 
 /**
- * UserHandler ???꾨찓?몃퀎 ?덉쇅 ?대옒?ㅺ? 怨듯넻?쇰줈 ?곸냽??湲곕컲 ?대옒?ㅼ엯?덈떎.
+ * 도메인별 예외 핸들러가 공통으로 상속할 기반 클래스입니다.
  */
 public class BaseHandler extends GeneralException {
 

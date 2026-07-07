@@ -1,7 +1,7 @@
 package com.todayscasting.common.response;
 
 /**
- * ?붿껌媛?寃利앹뿉 ?ㅽ뙣???꾨뱶紐낃낵 ?먯씤???깆뿉 ?꾨떖?섎뒗 ?묐떟?낅땲??
+ * 요청값 검증에 실패한 필드명과 원인을 응답에 전달하는 값 객체입니다.
  */
 public record ValidationError(
         String field,
