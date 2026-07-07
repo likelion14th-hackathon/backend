@@ -58,6 +58,9 @@ jobs:
       # PR 또는 브랜치의 소스 코드를 러너로 내려받습니다.
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          # 이후 단계는 Git push가 필요 없으므로 GITHUB_TOKEN을 Git 설정에 남기지 않습니다.
+          persist-credentials: false
 
       # 프로젝트 기준 버전인 Temurin Java 21을 설치합니다.
       - name: Set up Java 21
