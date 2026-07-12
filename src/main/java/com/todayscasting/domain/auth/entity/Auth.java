@@ -21,13 +21,13 @@ public class Auth {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private Provider provider;
 
-    @Column(name = "provider_user_id")
+    @Column(name = "provider_user_id", length = 100)
     private String providerUserId;
 
-    @Column(name = "password_hash")
+    @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
     @Column(nullable = false)
