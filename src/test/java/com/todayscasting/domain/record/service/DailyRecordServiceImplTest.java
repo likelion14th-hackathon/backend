@@ -48,7 +48,7 @@ class DailyRecordServiceImplTest {
 
     @Test
     void throwsNotFoundWhenUpdatingMissingRecord() {
-        when(dailyRecordRepository.findByIdAndDeletedAtIsNull(999L)).thenReturn(Optional.empty());
+        when(dailyRecordRepository.findByIdAndUserIdAndDeletedAtIsNull(999L, 1L)).thenReturn(Optional.empty());
 
         DailyRecordUpdateRequest request = new DailyRecordUpdateRequest("내용", List.of("GOOD"), List.of(), List.of());
 
@@ -68,7 +68,7 @@ class DailyRecordServiceImplTest {
     @Test
     void deletesDailyRecordAsSoftDelete() {
         DailyRecord record = DailyRecord.create(1L, LocalDate.of(2026, 7, 9), "내용", List.of("GOOD"), List.of(), List.of());
-        when(dailyRecordRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(record));
+        when(dailyRecordRepository.findByIdAndUserIdAndDeletedAtIsNull(1L, 1L)).thenReturn(Optional.of(record));
 
         dailyRecordService.delete(1L, 1L);
 

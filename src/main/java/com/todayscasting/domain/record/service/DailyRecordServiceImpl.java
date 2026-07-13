@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,21 @@ public class DailyRecordServiceImpl implements DailyRecordService {
     @Override
     @Transactional
     public DailyRecordResponse create(Long userId, DailyRecordCreateRequest request) {
+        Optional<DailyRecord> existing = dailyRecordRepository.findByUserIdAndRecordDate(userId, request.recordDate());
+        // 같은 날짜로 이미 작성된 행이 있는지 확인(삭제된것도 포함해서 찾음)
+        if (existing.isPresent()) { // 삭제됐든 안됐든 DB에 데이터가 존재하면
+            DailyRecord dailyRecord = existing.get();
+            if (dailyRecord.isDeleted()) {
+                // 삭제된 행이면 새로 만들지 않고 되살려서 재사용(restore 메서드 이용)
+                dailyRecord.restore();
+                dailyRecord.update(request.content(), request.mood(), request.moodTags(), request.activityTags());
+                dailyRecordRepository.saveAndFlush(dailyRecord); // 즉시 DB에 반영해서 updatedAt 최신화
+                return DailyRecordConverter.toResponse(dailyRecord);
+            }
+            // 삭제 안된 행인데 또 작성 시도를 하면 409 에러 코드로 막음
+            throw new GeneralException(ErrorStatus.DUPLICATE_RESOURCE);
+        }
+        // 오늘 날짜로 작성된 기록이 아예 없는 경우 -> 원래대로 생성
         DailyRecord dailyRecord = DailyRecordConverter.toEntity(userId, request);
         DailyRecord saved = dailyRecordRepository.save(dailyRecord);
         return DailyRecordConverter.toResponse(saved);
@@ -32,17 +48,18 @@ public class DailyRecordServiceImpl implements DailyRecordService {
     @Override
     @Transactional
     public DailyRecordResponse update(Long userId, Long recordId, DailyRecordUpdateRequest request) {
-        DailyRecord dailyRecord = dailyRecordRepository.findByIdAndDeletedAtIsNull(recordId)
+        DailyRecord dailyRecord = dailyRecordRepository.findByIdAndUserIdAndDeletedAtIsNull(recordId, userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.RESOURCE_NOT_FOUND));
 
         dailyRecord.update(request.content(), request.mood(), request.moodTags(), request.activityTags());
+        dailyRecordRepository.saveAndFlush(dailyRecord); // 추가: 즉시 DB에 반영해서 updatedAt 최신화
         return DailyRecordConverter.toResponse(dailyRecord);
     }
 
     @Override
     @Transactional
     public void delete(Long userId, Long recordId) {
-        DailyRecord dailyRecord = dailyRecordRepository.findByIdAndDeletedAtIsNull(recordId)
+        DailyRecord dailyRecord = dailyRecordRepository.findByIdAndUserIdAndDeletedAtIsNull(recordId, userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.RESOURCE_NOT_FOUND));
 
         dailyRecord.delete();
