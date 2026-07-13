@@ -61,6 +61,7 @@ public class AiAnalysisLog extends BaseEntity {
 
     public void markFailed(String errorMessage) {
         this.status = AnalysisStatus.FAILED;
+        this.rawResponse = null;
         this.errorMessage = errorMessage;
     }
 }
