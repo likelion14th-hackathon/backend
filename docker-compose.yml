@@ -7,9 +7,12 @@ services:
       - "${SERVER_PORT:-8080}:8080"
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
-      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-todays_casting}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
-      DB_USERNAME: ${MYSQL_USER:-todays}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-todays1234}
+      LOCAL_DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: ${MYSQL_USER}
+      LOCAL_DB_PASSWORD: ${MYSQL_PASSWORD}
+      PROD_DB_URL: ${PROD_DB_URL:-}
+      PROD_DB_USERNAME: ${PROD_DB_USERNAME:-}
+      PROD_DB_PASSWORD: ${PROD_DB_PASSWORD:-}
       TZ: Asia/Seoul
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
     depends_on:
@@ -21,12 +24,12 @@ services:
     container_name: todays-casting-mysql
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-todays_casting}
-      MYSQL_USER: ${MYSQL_USER:-todays}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-todays1234}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root1234}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: Asia/Seoul
     volumes:
       - mysql-data:/var/lib/mysql
@@ -34,7 +37,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MYSQL_USER:-todays}", "-p${MYSQL_PASSWORD:-todays1234}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
