@@ -56,3 +56,9 @@ management:
   endpoint:
     health:
       show-details: never
+
+# AWS S3 설정
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET_NAME}
+    region: ${AWS_S3_REGION}

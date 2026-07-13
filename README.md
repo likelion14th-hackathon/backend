@@ -46,6 +46,10 @@ LOCAL_DB_URL=jdbc:mysql://localhost:3306/todays_casting?serverTimezone=Asia/Seou
 LOCAL_DB_USERNAME=todays
 LOCAL_DB_PASSWORD=change-me
 
+# AWS S3
+AWS_S3_BUCKET_NAME=your-s3-bucket-name
+AWS_S3_REGION=your-s3-region
+
 TZ=Asia/Seoul
 ```
 
@@ -167,6 +171,8 @@ EC2_DEPLOY_PATH
 LOCAL_DB_URL
 LOCAL_DB_USERNAME
 LOCAL_DB_PASSWORD
+AWS_S3_BUCKET_NAME
+AWS_S3_REGION
 ```
 
 - `DOCKERHUB_USERNAME`: DockerHub 계정명입니다.
@@ -178,6 +184,8 @@ LOCAL_DB_PASSWORD
 - `LOCAL_DB_URL`: 배포 환경에서 사용할 RDS JDBC URL입니다.
 - `LOCAL_DB_USERNAME`: 배포 환경에서 사용할 RDS 사용자명입니다.
 - `LOCAL_DB_PASSWORD`: 배포 환경에서 사용할 RDS 비밀번호입니다.
+- `AWS_S3_BUCKET_NAME`: 이미지 파일을 저장할 S3 버킷명입니다.
+- `AWS_S3_REGION`: S3 버킷이 생성된 AWS 리전입니다.
 
 ## AWS EC2 배포
 
