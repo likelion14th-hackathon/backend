@@ -43,8 +43,16 @@ SPRING_PROFILES_ACTIVE=local
 
 MYSQL_DATABASE=todays_casting
 MYSQL_USER=todays
-MYSQL_PASSWORD=todays1234
-MYSQL_ROOT_PASSWORD=root1234
+MYSQL_PASSWORD=change-me
+MYSQL_ROOT_PASSWORD=change-me
+
+LOCAL_DB_URL=jdbc:mysql://localhost:3306/todays_casting?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+LOCAL_DB_USERNAME=todays
+LOCAL_DB_PASSWORD=change-me
+
+PROD_DB_URL=jdbc:mysql://rds-endpoint:3306/todays_casting?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
+PROD_DB_USERNAME=prod-user
+PROD_DB_PASSWORD=change-me
 
 TZ=Asia/Seoul
 ```
@@ -91,15 +99,15 @@ docker compose down
 Host: 127.0.0.1
 Port: 3306
 Database: todays_casting
-Username: todays
-Password: todays1234
+Username: .env MYSQL_USER / LOCAL_DB_USERNAME
+Password: .env MYSQL_PASSWORD / LOCAL_DB_PASSWORD
 ```
 
 root 계정은 MySQL 컨테이너 초기화와 긴급 DB 관리 용도로만 사용합니다.
 
 ```text
 Username: root
-Password: root1234
+Password: .env MYSQL_ROOT_PASSWORD
 ```
 
 ## Flyway 마이그레이션
@@ -220,5 +228,5 @@ http://<EC2_PUBLIC_IP>:8080/swagger-ui.html
 ## 참고 사항
 
 - 현재 배포 구조는 Docker Compose 내부 MySQL을 사용합니다.
-- RDS는 추후 필요할 때 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`를 외부 DB 기준으로 변경해 도입합니다.
+- RDS는 추후 필요할 때 `PROD_DB_URL`, `PROD_DB_USERNAME`, `PROD_DB_PASSWORD`를 외부 DB 기준으로 변경해 도입합니다.
 - Redis, S3, Kakao Login, Gemini, GitHub Actions CI/CD는 관련 기능 구현 시점에 추가합니다.
