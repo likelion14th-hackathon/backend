@@ -60,5 +60,5 @@ management:
 # AWS S3 설정
 aws:
   s3:
-    bucket: ${AWS_S3_BUCKET_NAME:todays-casting-prod-2026}
-    region: ${AWS_S3_REGION:ap-northeast-2}
+    bucket: ${AWS_S3_BUCKET_NAME}
+    region: ${AWS_S3_REGION}
