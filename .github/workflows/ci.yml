@@ -1,33 +1,33 @@
-name: Backend CI
+name: CI
 
-# main 또는 dev 브랜치에 코드가 반영되거나 PR이 열리면 CI를 실행합니다.
 on:
+  # dev 브랜치에 push되면 CI를 실행합니다.
   push:
     branches:
-      - main
       - dev
+  # dev 또는 main 브랜치로 PR이 열리면 CI를 실행합니다.
   pull_request:
     branches:
-      - main
       - dev
+      - main
+  # 수동 실행 허용
   workflow_dispatch:
 
-# 같은 브랜치에 새 커밋이 올라오면 이전 실행을 취소해 불필요한 실행을 줄입니다.
 concurrency:
+  # 같은 브랜치의 이전 실행은 취소하고 최신 커밋만 검증합니다.
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# 코드 조회에 필요한 최소 권한만 허용합니다.
 permissions:
+  # 저장소 소스 조회에 필요한 최소 권한만 사용합니다.
   contents: read
 
 jobs:
-  test:
-    name: Build and Test
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
-    # 애플리케이션 컨텍스트 테스트에서 사용할 임시 MySQL입니다.
+    # GitHub Actions 테스트에서만 사용하는 MySQL 서비스입니다.
     services:
       mysql:
         image: mysql:8.0
@@ -45,43 +45,57 @@ jobs:
           --health-timeout=5s
           --health-retries=10
 
-    # Spring Boot가 위의 MySQL 서비스에 연결할 때 사용하는 테스트 환경변수입니다.
+    # Spring Boot 테스트 datasource는 GitHub Actions의 MySQL 서비스를 바라봅니다.
     env:
       SPRING_PROFILES_ACTIVE: local
-      DB_URL: "jdbc:mysql://127.0.0.1:3306/todays_casting?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true"
-      DB_USERNAME: todays
-      DB_PASSWORD: todays1234
+      LOCAL_DB_URL: "jdbc:mysql://127.0.0.1:3306/todays_casting?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true"
+      LOCAL_DB_USERNAME: todays
+      LOCAL_DB_PASSWORD: todays1234
+      AWS_S3_BUCKET_NAME: ci-test-bucket
+      AWS_S3_REGION: ap-northeast-2
       TZ: Asia/Seoul
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
 
     steps:
-      # PR 또는 브랜치의 소스 코드를 러너로 내려받습니다.
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Checkout code
+        # 저장소 코드를 러너에 체크아웃합니다.
+        uses: actions/checkout@v4
         with:
-          # 이후 단계는 Git push가 필요 없으므로 GITHUB_TOKEN을 Git 설정에 남기지 않습니다.
           persist-credentials: false
 
-      # 프로젝트 기준 버전인 Temurin Java 21을 설치합니다.
-      - name: Set up Java 21
-        uses: actions/setup-java@v5
+      - name: Set up JDK 21
+        # 프로젝트 기준 버전인 Temurin Java 21을 설치합니다.
+        uses: actions/setup-java@v4
         with:
-          distribution: temurin
           java-version: "21"
+          distribution: temurin
 
-      # Gradle 캐시와 Wrapper 검증을 설정합니다.
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+      - name: Cache Gradle packages
+        # Gradle 의존성과 Wrapper 캐시를 재사용해 CI 시간을 줄입니다.
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      # Windows에서 추가된 gradlew 파일을 Linux에서도 실행할 수 있게 합니다.
-      - name: Grant execute permission for Gradle Wrapper
-        run: chmod +x gradlew
+      - name: Make gradlew executable
+        # Windows에서 추가된 gradlew 파일을 Linux 러너에서도 실행할 수 있게 합니다.
+        run: chmod +x ./gradlew
 
-      # 컴파일, Flyway 적용, 전체 테스트와 실행 가능한 JAR 생성을 검증합니다.
-      - name: Build and test
+      - name: Build with Gradle
+        # 컴파일, 테스트, 실행 가능한 JAR 생성, Flyway/JPA 시작 검증을 모두 수행합니다.
         run: ./gradlew clean build --no-daemon
 
-      # AWS 배포 전에 Dockerfile로 애플리케이션 이미지가 정상 생성되는지 검증합니다.
-      # CI에서는 외부 Registry로 이미지를 push하지 않으므로 별도 비밀키가 필요하지 않습니다.
+      - name: Upload build artifacts
+        # 빌드 결과 JAR를 Actions artifact로 보관합니다.
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/libs/
+
       - name: Build Docker image
+        # CI에서는 DockerHub에 push하지 않고 이미지가 정상 빌드되는지만 검증합니다.
         run: docker build --tag todays-casting-backend:${{ github.sha }} .
