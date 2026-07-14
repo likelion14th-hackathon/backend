@@ -1,5 +1,6 @@
 package com.todayscasting.domain.record.service;
 
+import com.todayscasting.common.code.status.ErrorStatus;
 import com.todayscasting.common.exception.GeneralException;
 import com.todayscasting.domain.record.converter.DailyRecordConverter;
 import com.todayscasting.domain.record.dto.request.DailyRecordCreateRequest;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -73,5 +75,45 @@ class DailyRecordServiceImplTest {
         dailyRecordService.delete(1L, 1L);
 
         assertThat(record.isDeleted()).isTrue();
+    }
+
+    @Test
+    void updatesDailyRecord() {
+        DailyRecord record = DailyRecord.create(1L, LocalDate.of(2026, 7, 9), "원래 내용", List.of("GOOD"), List.of(), List.of());
+        when(dailyRecordRepository.findByIdAndUserIdAndDeletedAtIsNull(1L, 1L)).thenReturn(Optional.of(record));
+
+        DailyRecordUpdateRequest request = new DailyRecordUpdateRequest("수정된 내용", List.of("BAD"), List.of("피곤함"), List.of());
+
+        DailyRecordResponse response = dailyRecordService.update(1L, 1L, request);
+
+        assertThat(response.content()).isEqualTo("수정된 내용");
+        assertThat(response.mood()).isEqualTo(List.of("BAD"));
+    }
+
+    @Test
+    void returnsRecordWhenDateHasRecord() {
+        DailyRecord record = DailyRecord.create(1L, LocalDate.of(2026, 7, 9), "오늘 기록", List.of("GOOD"), List.of(), List.of());
+        when(dailyRecordRepository.findByUserIdAndRecordDateAndDeletedAtIsNull(1L, LocalDate.of(2026, 7, 9)))
+                .thenReturn(Optional.of(record));
+
+        DailyRecordResponse response = dailyRecordService.getByDate(1L, LocalDate.of(2026, 7, 9));
+
+        assertThat(response.content()).isEqualTo("오늘 기록");
+    }
+
+    @Test
+    void throwsDuplicateResourceOnConcurrentCreate() {
+        DailyRecordCreateRequest request = new DailyRecordCreateRequest(
+                LocalDate.of(2026, 7, 9), "동시 작성 시도", List.of("GOOD"), List.of(), List.of()
+        );
+        when(dailyRecordRepository.findByUserIdAndRecordDate(1L, LocalDate.of(2026, 7, 9)))
+                .thenReturn(Optional.empty());
+        when(dailyRecordRepository.save(any(DailyRecord.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> dailyRecordService.create(1L, request))
+                .isInstanceOf(GeneralException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorStatus.DUPLICATE_RESOURCE);
     }
 }

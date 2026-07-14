@@ -9,6 +9,7 @@ import com.todayscasting.domain.record.dto.response.DailyRecordResponse;
 import com.todayscasting.domain.record.entity.DailyRecord;
 import com.todayscasting.domain.record.repository.DailyRecordRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,8 +42,12 @@ public class DailyRecordServiceImpl implements DailyRecordService {
         }
         // 오늘 날짜로 작성된 기록이 아예 없는 경우 -> 원래대로 생성
         DailyRecord dailyRecord = DailyRecordConverter.toEntity(userId, request);
-        DailyRecord saved = dailyRecordRepository.save(dailyRecord);
-        return DailyRecordConverter.toResponse(saved);
+        try {
+            DailyRecord saved = dailyRecordRepository.save(dailyRecord);
+            return DailyRecordConverter.toResponse(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new GeneralException(ErrorStatus.DUPLICATE_RESOURCE);
+        }
     }
 
     @Override
