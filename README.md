@@ -40,19 +40,15 @@ cp .env.example .env
 ```env
 SERVER_PORT=8080
 SPRING_PROFILES_ACTIVE=local
-
-MYSQL_DATABASE=todays_casting
-MYSQL_USER=todays
-MYSQL_PASSWORD=change-me
-MYSQL_ROOT_PASSWORD=change-me
+DOCKERHUB_USERNAME=your-dockerhub-username
 
 LOCAL_DB_URL=jdbc:mysql://localhost:3306/todays_casting?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
 LOCAL_DB_USERNAME=todays
 LOCAL_DB_PASSWORD=change-me
 
-PROD_DB_URL=jdbc:mysql://rds-endpoint:3306/todays_casting?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
-PROD_DB_USERNAME=prod-user
-PROD_DB_PASSWORD=change-me
+# AWS S3
+AWS_S3_BUCKET_NAME=your-s3-bucket-name
+AWS_S3_REGION=your-s3-region
 
 TZ=Asia/Seoul
 ```
@@ -61,10 +57,11 @@ TZ=Asia/Seoul
 
 ## Docker Compose 실행
 
-Spring Boot 애플리케이션과 MySQL을 함께 실행합니다.
+Docker Compose는 배포 서버에서 Spring Boot 애플리케이션 컨테이너를 실행합니다.
+DB는 Compose 안에서 띄우지 않고 `.env`의 `LOCAL_DB_*` 값으로 외부 DB에 연결합니다.
 
 ```bash
-docker compose up --build -d
+docker compose up -d
 ```
 
 컨테이너 상태 확인:
@@ -99,15 +96,16 @@ docker compose down
 Host: 127.0.0.1
 Port: 3306
 Database: todays_casting
-Username: .env MYSQL_USER / LOCAL_DB_USERNAME
-Password: .env MYSQL_PASSWORD / LOCAL_DB_PASSWORD
+Username: .env LOCAL_DB_USERNAME
+Password: .env LOCAL_DB_PASSWORD
 ```
 
-root 계정은 MySQL 컨테이너 초기화와 긴급 DB 관리 용도로만 사용합니다.
+
+root 또는 관리자 계정은 긴급 DB 관리가 필요할 때만 사용합니다.
 
 ```text
 Username: root
-Password: .env MYSQL_ROOT_PASSWORD
+Password: 필요한 대상 DB의 관리자 비밀번호를 사용합니다.
 ```
 
 ## Flyway 마이그레이션
@@ -155,12 +153,46 @@ git push -u origin main
 
 `.env`는 `.gitignore`에 포함되어 있으므로 Git에 올라가지 않습니다.
 
-## AWS EC2 1차 배포
+## GitHub Actions CI/CD
 
-현재 구조는 RDS 없이 EC2 내부에서 Docker Compose로 Spring Boot 애플리케이션과 MySQL을 함께 실행하는 방식입니다.
+GitHub Actions는 PR과 push에서 빌드 및 테스트를 수행합니다.
+`main` 브랜치에 push되면 DockerHub에 이미지를 올린 뒤 EC2에서 Docker Compose 배포를 갱신합니다.
+DockerHub repository는 public 기준으로 사용합니다.
+
+GitHub Repository Secrets에 아래 값을 등록합니다.
+
+```text
+DOCKERHUB_USERNAME
+DOCKERHUB_TOKEN
+EC2_HOST
+EC2_USERNAME
+EC2_SSH_KEY
+EC2_DEPLOY_PATH
+LOCAL_DB_URL
+LOCAL_DB_USERNAME
+LOCAL_DB_PASSWORD
+AWS_S3_BUCKET_NAME
+AWS_S3_REGION
+```
+
+- `DOCKERHUB_USERNAME`: DockerHub 계정명입니다.
+- `DOCKERHUB_TOKEN`: DockerHub Access Token입니다.
+- `EC2_HOST`: EC2 퍼블릭 IP 또는 도메인입니다.
+- `EC2_USERNAME`: EC2 SSH 사용자명입니다. Amazon Linux는 보통 `ec2-user`입니다.
+- `EC2_SSH_KEY`: EC2 접속용 private key 전체 내용입니다.
+- `EC2_DEPLOY_PATH`: EC2 안에서 배포 저장소를 둘 디렉터리입니다. 예시는 `/home/ec2-user/backend`입니다.
+- `LOCAL_DB_URL`: 배포 환경에서 사용할 RDS JDBC URL입니다.
+- `LOCAL_DB_USERNAME`: 배포 환경에서 사용할 RDS 사용자명입니다.
+- `LOCAL_DB_PASSWORD`: 배포 환경에서 사용할 RDS 비밀번호입니다.
+- `AWS_S3_BUCKET_NAME`: 이미지 파일을 저장할 S3 버킷명입니다.
+- `AWS_S3_REGION`: S3 버킷이 생성된 AWS 리전입니다.
+
+## AWS EC2 배포
+
+현재 구조는 RDS를 DB로 사용하고, EC2에서는 Docker Compose로 Spring Boot 애플리케이션 컨테이너만 실행하는 방식입니다.
 
 1. EC2 인스턴스를 생성합니다.
-   - Ubuntu 22.04 또는 24.04 권장
+   - Amazon Linux 기준으로 문서를 작성합니다.
    - 해커톤 초기에는 `t3.micro` 또는 `t2.micro` 사용 가능
 
 2. 보안 그룹 인바운드 규칙을 설정합니다.
@@ -171,17 +203,17 @@ git push -u origin main
 3. EC2에 접속합니다.
 
 ```bash
-ssh -i <키페어파일.pem> ubuntu@<EC2_PUBLIC_IP>
+ssh -i <키페어파일.pem> ec2-user@<EC2_PUBLIC_IP>
 ```
 
 4. Docker, Docker Compose, Git을 설치합니다.
 
 ```bash
-sudo apt update
-sudo apt install -y docker.io docker-compose-plugin git
+sudo yum update -y
+sudo yum install -y docker git
 sudo systemctl enable docker
 sudo systemctl start docker
-sudo usermod -aG docker ubuntu
+sudo usermod -aG docker ec2-user
 ```
 
 권한 적용을 위해 SSH 접속을 끊고 다시 접속합니다.
@@ -189,26 +221,22 @@ sudo usermod -aG docker ubuntu
 5. 프로젝트를 clone합니다.
 
 ```bash
+cd /home/ec2-user
 git clone https://github.com/likelion14th-hackathon/backend.git
 cd backend
 ```
 
-6. `.env` 파일을 생성합니다.
+6. `.env` 파일을 준비합니다.
 
-```bash
-cp .env.example .env
-```
+CD 실행 시 GitHub Secrets의 `LOCAL_DB_URL`, `LOCAL_DB_USERNAME`, `LOCAL_DB_PASSWORD` 값으로 EC2 서버에 `.env`가 생성됩니다.
+애플리케이션은 환경 구분 없이 `LOCAL_DB_*` 값을 datasource로 사용합니다.
 
-필요하면 `.env` 값을 수정합니다.
-
-```bash
-nano .env
-```
+수동으로 먼저 실행해야 한다면 `.env.example`을 복사한 뒤 `LOCAL_DB_*`에 RDS 접속 정보를 넣습니다.
 
 7. Docker Compose로 실행합니다.
 
 ```bash
-docker compose up --build -d
+docker compose up -d
 ```
 
 8. 배포 상태를 확인합니다.
@@ -227,6 +255,6 @@ http://<EC2_PUBLIC_IP>:8080/swagger-ui.html
 
 ## 참고 사항
 
-- 현재 배포 구조는 Docker Compose 내부 MySQL을 사용합니다.
-- RDS는 추후 필요할 때 `PROD_DB_URL`, `PROD_DB_USERNAME`, `PROD_DB_PASSWORD`를 외부 DB 기준으로 변경해 도입합니다.
-- Redis, S3, Kakao Login, Gemini, GitHub Actions CI/CD는 관련 기능 구현 시점에 추가합니다.
+- IntelliJ 로컬 실행은 로컬 DB의 `LOCAL_DB_*` 값을 사용합니다.
+- EC2 배포 실행은 RDS 접속 정보가 들어간 `LOCAL_DB_*` 값을 사용합니다.
+- DB 접속 환경변수는 `LOCAL_DB_*`로 통일합니다.

@@ -1,4 +1,4 @@
-# Multi-stage build for Spring Boot application
+# Spring Boot 애플리케이션 멀티 스테이지 빌드입니다.
 FROM eclipse-temurin:21-jdk AS builder
 
 WORKDIR /app
