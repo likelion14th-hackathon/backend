@@ -26,7 +26,7 @@ public class AuthService {
 
     @Transactional
     public TokenResponse signUp(SignUpRequest request) {
-        if (userRepository.existsByEmailAndDeletedAtIsNull(request.email())) {
+        if (userRepository.existsByEmail(request.email())) {
             throw new GeneralException(AuthErrorStatus.EMAIL_ALREADY_EXISTS);
         }
 
@@ -43,7 +43,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public TokenResponse login(LoginRequest request) {
-        User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
+        User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new GeneralException(AuthErrorStatus.USER_NOT_FOUND));
 
         Auth auth = authRepository.findByUserAndProvider(user, Auth.Provider.LOCAL)
