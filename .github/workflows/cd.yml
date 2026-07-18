@@ -101,6 +101,8 @@ jobs:
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             JWT_ACCESS_TOKEN_VALIDITY=${{ secrets.JWT_ACCESS_TOKEN_VALIDITY }}
             EOF
+            chmod 600 .env
+
 
             # Docker Compose v2/v1 자동 감지
             if docker compose version >/dev/null 2>&1; then

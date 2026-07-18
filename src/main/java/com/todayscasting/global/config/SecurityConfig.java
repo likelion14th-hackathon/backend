@@ -1,5 +1,6 @@
 package com.todayscasting.global.config;
 
+import org.springframework.security.config.http.SessionCreationPolicy;
 import com.todayscasting.global.security.jwt.JwtAuthenticationFilter;
 import com.todayscasting.global.security.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class SecurityConfig {
                 )
                 .formLogin(form -> form.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtProvider),
                         UsernamePasswordAuthenticationFilter.class)
                 .build();

@@ -43,7 +43,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public TokenResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
                 .orElseThrow(() -> new GeneralException(AuthErrorStatus.USER_NOT_FOUND));
 
         Auth auth = authRepository.findByUserAndProvider(user, Auth.Provider.LOCAL)
