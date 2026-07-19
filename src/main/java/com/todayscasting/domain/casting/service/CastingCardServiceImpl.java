@@ -41,6 +41,7 @@ public class CastingCardServiceImpl implements CastingCardService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CastingCardResponseDTO getCastingCard(Long dailyRecordId) {
         CastingCard castingCard = findByDailyRecordIdOrThrow(dailyRecordId);
         return CastingCardConverter.toResponseDTO(castingCard);
