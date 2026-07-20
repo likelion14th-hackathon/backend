@@ -10,9 +10,8 @@ import com.todayscasting.domain.analysis.entity.AiAnalysisLog;
 import com.todayscasting.domain.analysis.repository.AiAnalysisLogRepository;
 import com.todayscasting.global.client.GeminiClient;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,10 +22,6 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
 
     @Override
     public AiAnalysisResponseDTO requestAnalysis(AiAnalysisRequestDTO request) {
-
-        if (aiAnalysisLogRepository.findByDailyRecordId(request.getDailyRecordId()).isPresent()) {
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST);
-        }
 
         AiAnalysisLog savedLog = savePendingLog(request);
 
@@ -41,7 +36,6 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         return AiAnalysisConverter.toResponseDTO(finalLog);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AiAnalysisLog savePendingLog(AiAnalysisRequestDTO request) {
         AiAnalysisLog aiAnalysisLog = AiAnalysisLog.builder()
                 .dailyRecordId(request.getDailyRecordId())
@@ -50,10 +44,14 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
                 .prompt(buildPrompt(request.getDailyRecordId()))
                 .build();
 
-        return aiAnalysisLogRepository.save(aiAnalysisLog);
+        try {
+            return aiAnalysisLogRepository.save(aiAnalysisLog);
+        } catch (DataIntegrityViolationException e) {
+            // DB의 유니크 제약으로 동시 요청이 걸러진 경우
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST);
+        }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markSuccess(Long id, String rawResponse) {
         AiAnalysisLog log = aiAnalysisLogRepository.findById(id)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.RESOURCE_NOT_FOUND));
@@ -61,7 +59,6 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         aiAnalysisLogRepository.save(log);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(Long id, String errorMessage) {
         AiAnalysisLog log = aiAnalysisLogRepository.findById(id)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.RESOURCE_NOT_FOUND));
