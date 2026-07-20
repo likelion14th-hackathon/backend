@@ -1,9 +1,12 @@
 package com.todayscasting.global.client;
 
+import com.todayscasting.common.code.status.ErrorStatus;
+import com.todayscasting.common.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +41,7 @@ public class GeminiClient {
                 .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(30))
                 .block();
 
         String rawText = extractText(response);
@@ -46,10 +50,31 @@ public class GeminiClient {
 
     @SuppressWarnings("unchecked")
     private String extractText(Map<String, Object> response) {
+        if (response == null) {
+            throw new GeneralException(ErrorStatus.INTERNAL_SERVER_ERROR);
+        }
+
         List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
+        if (candidates == null || candidates.isEmpty()) {
+            throw new GeneralException(ErrorStatus.INTERNAL_SERVER_ERROR);
+        }
+
         Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+        if (content == null) {
+            throw new GeneralException(ErrorStatus.INTERNAL_SERVER_ERROR);
+        }
+
         List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-        return (String) parts.get(0).get("text");
+        if (parts == null || parts.isEmpty()) {
+            throw new GeneralException(ErrorStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        Object text = parts.get(0).get("text");
+        if (text == null) {
+            throw new GeneralException(ErrorStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return (String) text;
     }
 
     // Gemini 응답이 마크다운 코드블록(```json ... ```)으로 감싸져 오는 경우,
