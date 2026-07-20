@@ -8,6 +8,7 @@ import com.todayscasting.domain.analysis.dto.response.AiAnalysisResponseDTO;
 import com.todayscasting.domain.analysis.dto.response.AiAnalysisStatusResponseDTO;
 import com.todayscasting.domain.analysis.entity.AiAnalysisLog;
 import com.todayscasting.domain.analysis.repository.AiAnalysisLogRepository;
+import com.todayscasting.global.client.GeminiClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -18,19 +19,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class AiAnalysisServiceImpl implements AiAnalysisService {
 
     private final AiAnalysisLogRepository aiAnalysisLogRepository;
+    private final GeminiClient geminiClient;
 
     @Override
     public AiAnalysisResponseDTO requestAnalysis(AiAnalysisRequestDTO request) {
 
-        // 이미 같은 daily_record_id로 분석 로그가 있으면 중복 생성을 막고 기존 것을 반환
         if (aiAnalysisLogRepository.findByDailyRecordId(request.getDailyRecordId()).isPresent()) {
             throw new GeneralException(ErrorStatus.INVALID_REQUEST);
         }
 
-        // 1단계: PENDING 상태를 별도 트랜잭션으로 즉시 커밋
         AiAnalysisLog savedLog = savePendingLog(request);
 
-        // 2단계: AI 호출은 별도 트랜잭션에서 처리
         try {
             String rawResponse = callAiServer(savedLog.getPrompt());
             markSuccess(savedLog.getId(), rawResponse);
@@ -47,7 +46,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         AiAnalysisLog aiAnalysisLog = AiAnalysisLog.builder()
                 .dailyRecordId(request.getDailyRecordId())
                 .provider("GEMINI")
-                .model("gemini-2.0-flash")
+                .model("gemini-3.5-flash")
                 .prompt(buildPrompt(request.getDailyRecordId()))
                 .build();
 
@@ -59,6 +58,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         AiAnalysisLog log = aiAnalysisLogRepository.findById(id)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.RESOURCE_NOT_FOUND));
         log.markSuccess(rawResponse);
+        aiAnalysisLogRepository.save(log);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -66,6 +66,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         AiAnalysisLog log = aiAnalysisLogRepository.findById(id)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.RESOURCE_NOT_FOUND));
         log.markFailed(errorMessage);
+        aiAnalysisLogRepository.save(log);
     }
 
     @Override
@@ -86,13 +87,13 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
     }
 
     private String buildPrompt(Long dailyRecordId) {
-        // TODO: daily_records 테이블에서 content 조회해서 실제 프롬프트로 조립
-        return "daily_record_id " + dailyRecordId + "에 대한 분석 요청";
+        // TODO: daily_records 테이블에서 content 조회해서 실제 프롬프트로 조립 (다음 단계에서 진행)
+        return "daily_record_id " + dailyRecordId + "에 대한 분석 요청입니다. "
+                + "JSON 형식으로만 답변해주세요.";
     }
 
     private String callAiServer(String prompt) {
-        // TODO: AI 서버(FastAPI) 완성되면 실제 HTTP 호출로 교체
-        return "{\"role\": \"임시 배역\", \"genre\": \"임시 장르\", \"score\": 80, \"comment\": \"임시 코멘트입니다\"}";
+        return geminiClient.generateContent(prompt);
     }
 
 }
