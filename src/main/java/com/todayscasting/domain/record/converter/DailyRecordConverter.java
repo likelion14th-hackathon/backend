@@ -1,0 +1,35 @@
+package com.todayscasting.domain.record.converter;
+
+import com.todayscasting.domain.record.dto.request.DailyRecordCreateRequest;
+import com.todayscasting.domain.record.dto.response.DailyRecordResponse;
+import com.todayscasting.domain.record.entity.DailyRecord;
+
+public class DailyRecordConverter {
+
+    private DailyRecordConverter() {
+    }
+
+    public static DailyRecord toEntity(Long userId, DailyRecordCreateRequest request) {
+        return DailyRecord.create(
+                userId,
+                request.recordDate(),
+                request.content(),
+                request.mood(),
+                request.moodTags(),
+                request.activityTags()
+        );
+    }
+
+    public static DailyRecordResponse toResponse(DailyRecord dailyRecord) {
+        return new DailyRecordResponse(
+                dailyRecord.getId(),
+                dailyRecord.getRecordDate(),
+                dailyRecord.getContent(),
+                dailyRecord.getMood(),
+                dailyRecord.getMoodTags(),
+                dailyRecord.getActivityTags(),
+                dailyRecord.getCreatedAt(),
+                dailyRecord.getUpdatedAt()
+        );
+    }
+}
