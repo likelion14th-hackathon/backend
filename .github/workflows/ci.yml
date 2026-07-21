@@ -55,6 +55,8 @@ jobs:
       AWS_S3_REGION: ap-northeast-2
       TZ: Asia/Seoul
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
+      JWT_SECRET: ci-test-secret-key-must-be-at-least-32-characters
+      JWT_ACCESS_TOKEN_VALIDITY: 3600000
 
     steps:
       - name: Checkout code
