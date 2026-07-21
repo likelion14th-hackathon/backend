@@ -7,6 +7,7 @@ import com.todayscasting.domain.analysis.dto.request.AiAnalysisRequestDTO;
 import com.todayscasting.domain.analysis.dto.response.AiAnalysisResponseDTO;
 import com.todayscasting.domain.analysis.dto.response.AiAnalysisStatusResponseDTO;
 import com.todayscasting.domain.analysis.entity.AiAnalysisLog;
+import com.todayscasting.domain.analysis.entity.AnalysisStatus;
 import com.todayscasting.domain.analysis.repository.AiAnalysisLogRepository;
 import com.todayscasting.global.client.GeminiClient;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +26,16 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
 
         AiAnalysisLog savedLog = savePendingLog(request);
 
+        String rawResponse = null;
         try {
-            String rawResponse = callAiServer(savedLog.getPrompt());
-            markSuccess(savedLog.getId(), rawResponse);
+            rawResponse = callAiServer(savedLog.getPrompt());
         } catch (Exception e) {
-            markFailed(savedLog.getId(), e.getMessage());
+            String errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            markFailed(savedLog.getId(), errorMessage);
+        }
+
+        if (rawResponse != null) {
+            markSuccess(savedLog.getId(), rawResponse);
         }
 
         AiAnalysisLog finalLog = findByDailyRecordIdOrThrow(request.getDailyRecordId());
@@ -37,6 +43,18 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
     }
 
     public AiAnalysisLog savePendingLog(AiAnalysisRequestDTO request) {
+        AiAnalysisLog existingLog = aiAnalysisLogRepository
+                .findByDailyRecordId(request.getDailyRecordId())
+                .orElse(null);
+
+        if (existingLog != null) {
+            if (existingLog.getStatus() == AnalysisStatus.FAILED) {
+                existingLog.retry(buildPrompt(request.getDailyRecordId()));
+                return aiAnalysisLogRepository.save(existingLog);
+            }
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST);
+        }
+
         AiAnalysisLog aiAnalysisLog = AiAnalysisLog.builder()
                 .dailyRecordId(request.getDailyRecordId())
                 .provider("GEMINI")
@@ -47,7 +65,6 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         try {
             return aiAnalysisLogRepository.save(aiAnalysisLog);
         } catch (DataIntegrityViolationException e) {
-            // DB의 유니크 제약으로 동시 요청이 걸러진 경우
             throw new GeneralException(ErrorStatus.INVALID_REQUEST);
         }
     }
