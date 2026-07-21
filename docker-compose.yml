@@ -17,6 +17,9 @@ services:
       AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
       AWS_S3_REGION: ${AWS_S3_REGION}
 
+      # Gemini API 접속 설정입니다.
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+
       # 애플리케이션 실행 환경 설정입니다.
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       SERVER_PORT: ${SERVER_PORT}
