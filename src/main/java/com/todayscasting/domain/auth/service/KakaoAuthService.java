@@ -26,22 +26,27 @@ public class KakaoAuthService {
         String kakaoAccessToken = kakaoClient.getToken(code).accessToken();
         KakaoUserResponse userInfo = kakaoClient.getUserInfo(kakaoAccessToken);
 
+        if (userInfo.id() == null
+                || userInfo.kakaoAccount() == null
+                || userInfo.kakaoAccount().profile() == null
+                || userInfo.kakaoAccount().profile().nickname() == null) {
+            throw new RuntimeException("카카오 사용자 정보를 가져올 수 없습니다.");
+        }
+
         String email = userInfo.kakaoAccount().email();
         String nickname = userInfo.kakaoAccount().profile().nickname();
         String providerId = String.valueOf(userInfo.id());
 
-        User user = userRepository.findByEmail(email)
+        Auth auth = authRepository.findByProviderAndProviderUserId(Auth.Provider.KAKAO, providerId)
                 .orElseGet(() -> {
-                    User newUser = new User(email, nickname);
-                    return userRepository.save(newUser);
+                    User newUser = userRepository.findByEmail(email)
+                            .orElseGet(() -> userRepository.save(new User(email, nickname)));
+                    return authRepository.save(new Auth(newUser, Auth.Provider.KAKAO, null, providerId));
                 });
 
-        authRepository.findByUserAndProvider(user, Auth.Provider.KAKAO)
-                .orElseGet(() -> {
-                    Auth newAuth = new Auth(user, Auth.Provider.KAKAO, null, providerId);
-                    return authRepository.save(newAuth);
-                });
+        User user = auth.getUser();
 
-        return new TokenResponse(jwtProvider.generateAccessToken(email));
+        return new TokenResponse(jwtProvider.generateAccessToken(user.getEmail()));
+
     }
 }

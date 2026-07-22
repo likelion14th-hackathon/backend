@@ -4,6 +4,7 @@ import com.todayscasting.domain.auth.dto.KakaoTokenResponse;
 import com.todayscasting.domain.auth.dto.KakaoUserResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -12,8 +13,16 @@ import org.springframework.web.client.RestClient;
 @Component
 public class KakaoClient {
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
 
+    public KakaoClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000);
+        factory.setReadTimeout(5000);
+        this.restClient = RestClient.builder()
+                .requestFactory(factory)
+                .build();
+    }
     @Value("${kakao.client-id}")
     private String clientId;
 
