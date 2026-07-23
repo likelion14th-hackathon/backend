@@ -63,6 +63,11 @@ aws:
     bucket: ${AWS_S3_BUCKET_NAME}
     region: ${AWS_S3_REGION}
 
+# Gemini API 설정 (AI 분석 요청 시 사용)
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: gemini-3.5-flash
+
 # JWT 설정
 jwt:
   secret: ${JWT_SECRET}
